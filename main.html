@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ホーム - あしったー！</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300&display=swap');
+        html,body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f5f5f5;
+        }
+        main {
+            width: 40%;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+            /*background-color: gray;*/
+        }
+        header {
+            width: 40%;
+            height: 50px;
+            padding-left: 15px;
+            padding-right: 15px;
+            background-color: #ffffff;
+            box-sizing: border-box;
+            position: fixed;     
+        }
+        header h3 {
+            margin: 0;
+            line-height: 50px;
+            float: left;
+        }
+        header .menu {
+            line-height: 50px;
+            text-align: right;
+        }
+        header .menu .menu_button {
+            padding: 5px 8px;
+            vertical-align: middle;
+            background-color: transparent;
+            border: 1px solid #7a7a7a;
+            border-radius: 5px;
+        }
+        header .menu i {
+            vertical-align: middle;
+        }
+        header .buttons_menu {
+            display: none;
+        }
+        header .logout-in {
+            padding: 10px 15px;
+            border-radius: 40px;
+            border: none;
+            color: #ffffff;
+            background-color: #5676e0;
+            transition: all 300ms 0s ease;
+            box-sizing: border-box;
+        }
+        header .logout-in:hover {
+            color: #000000;
+            background-color: #92a4df;
+        }
+        .tweets {
+            padding-top: 60px;
+            padding-bottom: 60px;
+            border-left: 1px solid #7a7a7a;
+            border-right: 1px solid #7a7a7a;
+        }
+        .tweets .write_area {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-bottom: 1px solid #7a7a7a;
+        }
+        .tweets .write_area textarea {
+            width: 100%;
+            height: 100px;
+            font-size: 16px;
+            resize: none;
+            border: none;
+            background: transparent;
+            box-sizing: border-box;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        .tweets .write_area textarea:focus {
+            border: none;
+            outline: none;
+        }
+        .tweets .write_area button {
+            padding: 10px 15px;
+            box-sizing: border-box;
+            background-color: #4385d1;
+            color: #ffffff;
+            border: none;
+            border-radius: 50px;
+        }
+        .tweet {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-bottom: 1px solid #7a7a7a;
+        }
+        .tweet .ue {
+            line-height: 20px;
+        }
+        .tweet h4 {
+            margin: 0;
+            float: left;
+            margin-right: 10px;
+        }
+        .tweet .id {
+            font-size: 12px;
+            color: gray;
+            font-weight: bold;
+            float: left;
+        }
+        .tweet .date {
+            font-size: 12px;
+            color: gray;
+            font-weight: bold;
+            float: right;
+        }
+        .tweet .id::before {
+            content: "@";
+        }
+        .tweet .content {
+            margin-top: 25px;
+            margin-bottom: 5px;
+            overflow-wrap: break-word;
+        }
+        .tweet .control {
+            height: 25px;
+        }
+        .tweet .control .like_button {
+            font-size: 17px;
+            float: left;
+            margin-top: 3px;
+            margin-right: 10px;
+            color: #414141;
+            /*liked*/
+            /*color: #f69437;*/
+        }
+        .tweet .control .like_count {
+            color: #414141;
+            font-size: 15px;
+            float: left;
+        }
+        .tweet .control .right {
+            text-align: right;
+        }
+        .tweet .control .del_button {
+            text-align: right;
+            color: #eb5959;
+        }
+        
+        @media screen and (max-width: 767px) {
+            main {
+                width: 70%;
+            }
+            header {
+                width: 70%;
+            }
+        }
+        @media screen and (max-width: 479px) {
+            main {
+                width: 100%;
+                border: none;
+            }
+            header {
+                width: 100%;
+            }
+        }
+    </style>
+    <script src="moment.min.js"></script>
+    <!--通知は実装したいけどめんどうになったので保留です(´;ω;｀)-->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/push.js/0.0.11/push.min.js"></script>-->
+    <script>
+
+        if('serviceWorker' in navigator){
+            navigator.serviceWorker.register('/serviceworker.js').then(function(){
+                console.log("Service Worker is registered!!");
+            });
+        }
+
+        window.onload = function() {
+            if (window.localStorage.getItem('UserID') == undefined) {
+                if (confirm("ログインしていないようです。ログインページへ移動しますか？")) {
+                    location.href = "login.html";
+                } else {
+                    document.getElementById("write_area").style.display = "none";
+                }
+            }
+        }
+        
+        var connect = new WebSocket("ws://iemike.f5.si:25566");
+
+        connect.onopen = function() {
+            console.log("[WebSocket] Connected!");
+        };
+
+        connect.onclose = function() {
+            console.log("[WebSocket] Disconnected!");
+        };
+
+        connect.onmessage = function(e) {
+            //console.log("[WebSocket]\n" + e.data);
+            var received_json = JSON.parse(e.data);
+            console.log(received_json); 
+            if (received_json["type"] =="tweets_data_notify") {
+                Push.create(received_json["tweet"]["user"]["name"], {
+                    body: received_json["tweet"]["content"],
+                    //icon: 'icon.png',
+                    timeout: 4000,
+                    onClick: function () {
+                        window.focus();
+                        this.close();
+                    }
+                });
+            }
+            if (received_json["type"] == "error") {
+                if (received_json["code"] == "200") {
+                    //ok
+                }
+                if (received_json["code"] == "400") {
+                    alert("ツイートが存在しません");
+                }
+                if (received_json["code"] == "401") {
+                    alert("権限がありません");
+                }
+            }
+            if (received_json["type"] == "tweets_data") {
+                var HTMLData = "";
+                for (var i=0; i<received_json["tweets"].length;i++){
+                    //#f14c4c
+                    var GetJson = received_json["tweets"][i];
+                    var date = moment(GetJson["date"], 'YYYY/MM/DD HH:mm:S').fromNow();
+                    if (GetJson["user"]["id"] == window.localStorage.getItem('UserID')) {
+                        var optionHTML = `<div class="right"><i class="material-icons del_button" onclick="TweetDeleteButton(` + GetJson["id_s"] + `);">delete</i></div>`;
+                    } else {
+                        var optionHTML = ``;
+                    }
+                    
+                    if (GetJson["counts"]["like"]["users"].includes(window.localStorage.getItem('UserID'))) {
+                        HTMLData += `<div class="tweet">
+                                    <div class="ue">
+                                        <h4>` + GetJson["user"]["name"] + `</h4>
+                                        <div class="id">` + GetJson["user"]["id"] + `</div>
+                                        <div class="date">` + date + `</div>
+                                    </div>
+                                    <div class="content">` + GetJson["content"] + `</div>
+                                    <div class="control">
+                                        <i class="material-icons like_button" style="color:#8dc9ec;" onclick="TweetLikeButton(` + GetJson["id_s"] + `);">
+                                            thumb_up
+                                        </i>
+                                        <div class="like_count" style="color:#54b1e7;">` + GetJson["counts"]["like"]["count"] + `</div>
+                                        ` + optionHTML + `
+                                    </div>
+                                </div>`;    
+                    } else {
+                        HTMLData += `<div class="tweet">
+                                    <div class="ue">
+                                        <h4>` + GetJson["user"]["name"] + `</h4>
+                                        <div class="id">` + GetJson["user"]["id"] + `</div>
+                                        <div class="date">` + date + `</div>
+                                    </div>
+                                    <div class="content">` + GetJson["content"] + `</div>
+                                    <div class="control">
+                                        <i class="material-icons like_button" onclick="TweetLikeButton(` + GetJson["id_s"] + `);">
+                                            thumb_up
+                                        </i>
+                                        <div class="like_count">` + GetJson["counts"]["like"]["count"] + `</div>
+                                        ` + optionHTML + `
+                                    </div>
+                                </div>`;    
+                    }
+                };
+                document.getElementById("tweets").innerHTML = HTMLData;
+            }
+        }
+        
+        //ツイート送信
+        function TweetSend() {
+            var content = document.getElementById("tweet_content").value;
+            if (content == ""){
+                return false;
+            } else if(!content.match(/\S/g)){
+                return false;
+            }
+            var name = encodeURIComponent(window.localStorage.getItem('Username'));
+            var id = encodeURIComponent(window.localStorage.getItem('UserID'));
+            var DateObj = new Date();
+            var date = DateObj.getFullYear() + "/" + (DateObj.getMonth() + 1) + "/" + DateObj.getDate() + " " + DateObj.getHours() + ":" + DateObj.getMinutes() + ":" + DateObj.getSeconds();
+            var SendJson = {
+                "type": "tweet_send",
+                "content": encodeURIComponent(content),
+                "id_s": Date.now().toString() + Math.floor(Math.random() * 128).toString(),
+                "date": date,
+                "user": {
+                    "name": name,
+                    "id": id
+                }
+            }
+            connect.send(JSON.stringify(SendJson))
+            document.getElementById("tweet_content").value = "";
+        }
+
+        //ツイートiine
+        function TweetLikeButton(TweetID) {
+            if (window.localStorage.getItem('UserID') == null) {
+                return
+            }
+            var name = encodeURIComponent(window.localStorage.getItem('Username'));
+            var id = encodeURIComponent(window.localStorage.getItem('UserID'));
+            var SendJson = {
+                "type": "tweet_like",
+                "id_s": TweetID,
+                "user": {
+                    "name": name,
+                    "id": id
+                }
+            }
+            connect.send(JSON.stringify(SendJson))
+        }
+
+        //ツイート削除(作成者のみ)
+        function TweetDeleteButton(TweetID) {
+            if (window.localStorage.getItem('UserID') == null) {
+                return
+            }
+            if (confirm("まじで消しますか？")) {
+                var name = encodeURIComponent(window.localStorage.getItem('Username'));
+                var id = encodeURIComponent(window.localStorage.getItem('UserID'));
+                var SendJson = {
+                    "type": "tweet_delete",
+                    "id_s": TweetID,
+                    "user": {
+                        "name": name,
+                        "id": id
+                    }
+                }
+                connect.send(JSON.stringify(SendJson))
+            } else {
+
+            }
+        }
+
+        //メニューの記述
+        var IsMenuOpened = false;
+        
+        function ClickMenu() {
+            if (IsMenuOpened == false) {
+                IsMenuOpened = true
+                document.getElementById("header").style.height = "100px";
+                document.getElementById("buttons_menu").style.display = "block";
+            } else {
+                IsMenuOpened = false
+                document.getElementById("header").style.height = "50px";
+                document.getElementById("buttons_menu").style.display = "none";
+            }
+        }
+
+        //ログアウトの設定
+
+        function ClickLogout() {
+            if (confirm("ログアウトしますか？")) {
+                window.localStorage.clear();
+                location.href = "login.html";
+            } else {
+
+            }
+        }
+
+    </script>
+</head>
+<body>
+    <main>
+        <header id="header">
+            <h3>ホーム</h3>
+            <div class="menu">
+                <button class="menu_button" onclick="ClickMenu();">
+                    <i class="material-icons">
+                        menu
+                    </i>
+                </button>
+            </div>  
+            <div class="buttons_menu" id="buttons_menu">
+                <button type="button" class="logout-in" onclick="ClickLogout();">ログアウト</button>
+            </div>       
+        </header>
+        <div class="tweets">
+            <div class="write_area" id="write_area">
+                <textarea placeholder="明日鯖で今なにしてる？（ここをクリックすると入力できます）" id="tweet_content"></textarea>
+                <button type="button" onclick="TweetSend();">送信</button>
+            </div>
+            <div class="tweets_" id="tweets">
+                
+                <div class="tweet">
+                    <div class="ue">
+                        <h4>めっせ</h4>
+                        <div class="id">messe13</div>
+                        <div class="date">13年前</div>
+                        
+                    </div>
+                    <div class="content">
+                       メッセージ取得中です...
+                    </div>
+                    <div class="control">
+                        <i class="material-icons like_button" onclick="TweetLikeButton('163610927796820');">
+                            thumb_up
+                        </i>
+                        <div class="like_count">
+                            0
+                        </div>
+                        <div class="right">
+                            <i class="material-icons del_button" onclick="TweetDeleteButton('163610927796820');">
+                                delete
+                            </i>
+                        </div>
+                    </div>
+                </div>
+            </div>         
+        </div>
+    </main>
+</body>
+</html>

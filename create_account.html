@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <title>アカウント作成 - あしったー！</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300&display=swap');
+        html,body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f5f5f5;
+        }
+        main {
+            width: 40%;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+            /*background-color: gray;*/
+        }
+        header {
+            width: 40%;
+            height: 50px;
+            line-height: 50px;
+            padding-left: 15px;
+            padding-right: 15px;
+            background-color: #ffffff;
+            box-sizing: border-box;
+            position: fixed;     
+        }
+        header h3 {
+            margin: 0;
+        }
+        .main {
+            padding-top: 70px;
+            padding-bottom: 60px;
+            padding-left: 10px;
+            padding-right: 10px;
+            border-left: none;
+        }
+        .loginc_form {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border: 1px solid #7a7a7a;
+        }
+        .loginc_button {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            border: none;
+            background-color: #219aaa;
+            color: #ffffff;
+            border-radius: 5px;
+        }
+        .loginc_button:hover {
+            background-color: #218aaa;
+        }
+        .loginc_button:active {
+            background-color: #217aaa;
+        }
+        @media screen and (max-width: 767px) {
+            main {
+                width: 70%;
+            }
+            header {
+                width: 70%;
+            }
+        }
+        @media screen and (max-width: 479px) {
+            main {
+                width: 100%;
+                border: none;
+            }
+            header {
+                width: 100%;
+            }
+        }
+    </style>
+    <script src="moment.min.js"></script>
+    <script>
+
+        if('serviceWorker' in navigator){
+            navigator.serviceWorker.register('serviceworker.js').then(function(){
+                console.log("Service Worker is registered!!");
+            });
+        }
+
+        var connect = new WebSocket("ws://iemike.f5.si:25566");
+
+        connect.onopen = function() {
+            console.log("[WebSocket] Connected!");
+        };
+
+        connect.onclose = function() {
+            console.log("[WebSocket] Disconnected!");
+        };
+
+        connect.onmessage = function(e) {
+            var received_json = JSON.parse(e.data);
+            if (received_json["type"] == "error") {
+                if (received_json["code"] == "300") {
+                    alert("ユーザーIDが既に使用されています");
+                    return
+                }
+            }
+            if (received_json["type"] == "ok") {
+                if (received_json["code"] == "200") {
+                    alert("登録に成功しました。");
+                    location.href = "login.html";
+                }
+            }
+        }
+
+        function TryAccountCreate() {
+            var UserID = encodeURIComponent(document.getElementById("userid").value);
+            var Username = encodeURIComponent(document.getElementById("username").value);
+            var UserPass = encodeURIComponent(document.getElementById("password").value);
+            
+            var SendJson = {
+                "type": "AccountCreate",
+                "UserID": UserID,
+                "Username": Username,
+                "Userpass": UserPass
+            };
+
+            connect.send(JSON.stringify(SendJson));
+        }
+        
+        </script>
+</head>
+<body>
+    <main>
+        <header>
+            <h3>アカウント作成</h3>
+        </header>
+        <div class="main">
+            <b>ユーザID</b><br>
+            <input type="text" class="loginc_form" placeholder="希望するユーザIDを入力" id="userid">
+            <b>ユーザ名</b><br>
+            <input type="text" class="loginc_form" placeholder="希望するユーザー名を入力" id="username">
+            <b>パスワード</b><br>
+            <input type="password" class="loginc_form" placeholder="希望するパスワードを入力" id="password">
+            <button type="button" class="loginc_button" onclick="TryAccountCreate();">アカウントを作成</button>
+            もうアカウントを持ってる？：<a href="login.html">ログイン</a>
+        </div>
+    </main>
+</body>
+</html>

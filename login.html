@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="jp">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <title>ログイン - あしったー！</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300&display=swap');
+        html,body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f5f5f5;
+        }
+        main {
+            width: 40%;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+            /*background-color: gray;*/
+        }
+        header {
+            width: 40%;
+            height: 50px;
+            line-height: 50px;
+            padding-left: 15px;
+            padding-right: 15px;
+            background-color: #ffffff;
+            box-sizing: border-box;
+            position: fixed;     
+        }
+        header h3 {
+            margin: 0;
+        }
+        .main {
+            padding-top: 70px;
+            padding-bottom: 60px;
+            padding-left: 10px;
+            padding-right: 10px;
+            border-left: none;
+        }
+        .login_form {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            border: 1px solid #7a7a7a;
+        }
+        .login_button {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            font-size: 16px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            border: none;
+            background-color: #219ddd;
+            color: #ffffff;
+            border-radius: 5px;
+        }
+        .login_button:hover {
+            background-color: #218ddd;
+        }
+        .login_button:active {
+            background-color: #217ddd;
+        }
+        @media screen and (max-width: 767px) {
+            main {
+                width: 70%;
+            }
+            header {
+                width: 70%;
+            }
+        }
+        @media screen and (max-width: 479px) {
+            main {
+                width: 100%;
+                border: none;
+            }
+            header {
+                width: 100%;
+            }
+        }
+    </style>
+    <script src="moment.min.js"></script>
+    <script>
+
+        if('serviceWorker' in navigator){
+            navigator.serviceWorker.register('/serviceworker.js').then(function(){
+                console.log("Service Worker is registered!!");
+            });
+        }
+
+        window.onload = function() {
+            if (window.localStorage.getItem('Username') != undefined) {
+                if (confirm("すでにログインしているようです。メインページへ移動しますか？")) {
+                    location.href = "main.html"
+                }
+            }
+        }
+
+        var connect = new WebSocket("ws://iemike.f5.si:25566");
+
+        connect.onopen = function() {
+            console.log("[WebSocket] Connected!");
+        };
+
+        connect.onclose = function() {
+            console.log("[WebSocket] Disconnected!");
+        };
+
+        connect.onmessage = function(e) {
+            var received_json = JSON.parse(e.data);
+            if (received_json["type"] == "error") {
+                if (received_json["code"] == "400") {
+                    alert("ユーザIDが存在しません");
+                    return
+                }
+                if (received_json["code"] == "301") {
+                    alert("パスワードが間違っています");
+                    return
+                }
+            }
+            if (received_json["type"] == "ok") {
+                if (received_json["code"] == "200") {
+                    //oklogin
+                    //document.cookie = "ID=" + document.getElementById("userid").value + "; Path=/; Domain=iemike.f5.si;";
+                    window.localStorage.setItem('Username', received_json["Username"]);
+                    window.localStorage.setItem('UserID', document.getElementById("userid").value);
+                    //document.cookie = "ID2=" + document.getElementById("userid").value + "; Domain=192.168.1.9";
+                    location.href = "main.html";
+                }
+            }
+        }
+
+        function TryAccountLogin() {
+            var UserID = encodeURIComponent(document.getElementById("userid").value);
+            var UserPass = encodeURIComponent(document.getElementById("password").value);
+            
+            var SendJson = {
+                "type": "AccountLogin",
+                "UserID": UserID,
+                "Userpass": UserPass
+            };
+
+            connect.send(JSON.stringify(SendJson));
+        }
+        
+    </script>
+</head>
+<body>
+    <main>
+        <header>
+            <h3>ログイン</h3>
+        </header>
+        <div class="main">
+            <b>ユーザID</b><br>
+            <input type="text" class="login_form" placeholder="ユーザIDを入力" id="userid">
+            <b>パスワード</b><br>
+            <input type="password" class="login_form" placeholder="パスワードを入力" id="password">
+            <button type="button" class="login_button" onclick="TryAccountLogin();">ログイン</button>
+            アカウントが無い？：<a href="create_account.html">作成する</a>
+        </div>
+    </main>
+</body>
+</html>
